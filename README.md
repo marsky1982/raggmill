@@ -1,15 +1,17 @@
 # raggmill
 
-> 本地优先的 RAG 测试集工作台：把文档编译成知识图谱，再合成可评估的测试集。
+RAGgmill is a local-first RAG quality engineering platform that turns unstructured documents into quantifiable, traceable evaluation assets—grounded in knowledge graphs and measured by LLM-synthesized test sets. It lets teams systematically measure, diagnose, and improve their RAG systems without relying on real user-labeled data.
 
-raggmill 是一个单机 Web 工作台，把 [ragas](https://github.com/vibrantlabsai/ragas) 的合成测试集生成能力做成可视化流程：
+是一款本地优先（local-first）的 RAG 质量工程平台。它以知识图谱为骨架、以大模型合成测试集为标尺，将非结构化文档转化为可量化、可追溯、可回归的评测资产，帮助团队在没有真实用户标注数据的情况下，依然能够系统性地度量、诊断并持续优化检索增强生成（RAG）系统的实际效果。
+
+在功能上，它是一条可视化流水线：
 
 ```
 文档 → [Step 1] 知识图谱(KG) → [Step 2] 测试集 → 导出 CSV / JSONL
                                       ↘ [Step 3] 质量评估（可选）
 ```
 
-定位：**ragas 是引擎，raggmill 是驾驶舱。** 本工具只做 ragas SDK 的消费方，不修改 ragas 源码，也不重新实现出题算法。
+分工上，**ragas 是引擎，raggmill 是驾驶舱**：本工具只做 [ragas](https://github.com/vibrantlabsai/ragas) SDK 的消费方，不修改 ragas 源码，也不重新实现出题算法。
 
 - 无数据库：全部产物落在本地 `data/`（JSON + 上传副本），可直接用文件管理器查看、备份。
 - 单机单用户：后端有单实例锁，避免多进程并发写同一份索引。
