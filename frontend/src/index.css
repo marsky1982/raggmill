@@ -1,0 +1,148 @@
+@import "tailwindcss";
+/* Tailwind v4 兼容层：继续复用 v3 的 tailwind.config.js（content / 字体） */
+@config "../tailwind.config.js";
+
+/* 深色模式用 class 切换（侧栏「深色 / 浅色」按钮写 documentElement.classList），
+   不用系统偏好；否则无法在浅色系统上手动切深色。 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* shadcn/ui 主题层：:root 为浅色默认值，.dark 为深色分支（两套变量均已存在，页面代码只引用语义名）。
+   旧色板名已于 2026-11 全量改名为语义名，不再映射（新旧名对照表见 设计文档 附录 B）。 */
+:root {
+  --radius: 0.5rem;
+  --background: #FAFAFA;
+  --foreground: #111113;
+  --card: #FFFFFF;
+  --card-foreground: #111113;
+  --popover: #FFFFFF;
+  --popover-foreground: #111113;
+  --primary: #5E6AD2;
+  --primary-foreground: #FFFFFF;
+  --primary-strong: #4A55C4;
+  --secondary: #F4F4F5;
+  --secondary-foreground: #111113;
+  --muted: #F4F4F5;
+  --muted-foreground: #6B6B74;
+  --accent: #EFEFF1;
+  --accent-foreground: #111113;
+  --destructive: #DC2626;
+  --border: #E4E4E7;
+  --input: #E4E4E7;
+  --ring: #5E6AD2;
+  /* 状态语义色（批次 3）：--x 作描边/图标，--x-soft 作浅底，--x-foreground 作浅底上的字色。
+     浅色取值来自整改方案 §3.1，均已在白底与浅底上复核 ≥ 4.5:1。 */
+  --success: #15803D;
+  --success-soft: #F0FDF4;
+  --success-foreground: #15803D;
+  --warning: #B45309;
+  --warning-soft: #FFFBEB;
+  --warning-foreground: #B45309;
+  --danger: #B91C1C;
+  --danger-soft: #FEF2F2;
+  --danger-foreground: #B91C1C;
+  --info: #4A55C4;
+  --info-soft: #EEF0FB;
+  --info-foreground: #4A55C4;
+}
+
+.dark {
+  --background: #0A0A0B;
+  --foreground: #EDEDEF;
+  --card: #111113;
+  --card-foreground: #EDEDEF;
+  --popover: #17171A;
+  --popover-foreground: #EDEDEF;
+  --secondary: #17171A;
+  --secondary-foreground: #EDEDEF;
+  --muted: #17171A;
+  --muted-foreground: #8E8E96;
+  --accent: #1E1E23;
+  --accent-foreground: #EDEDEF;
+  --destructive: #B91C1C;
+  --border: #26262B;
+  --input: #26262B;
+  --primary-strong: #7B86E8;
+  /* 深色分支：--x 描边更亮，--x-foreground 用浅色档保证在深底上 ≥ 4.5:1 */
+  --success: #34D399;
+  --success-soft: #0B1C19;
+  --success-foreground: #6EE7B7;
+  --warning: #F59E0B;
+  --warning-soft: #26150D;
+  --warning-foreground: #FCD34D;
+  --danger: #F87171;
+  --danger-soft: #260D0F;
+  --danger-foreground: #FCA5A5;
+  --info: #8B95F2;
+  --info-soft: #171A2E;
+  --info-foreground: #A5ADF5;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-strong: var(--primary-strong);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-foreground: var(--info-foreground);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+}
+
+/* Tailwind v4 的 preflight 去掉了 button { cursor: pointer }，可点元素统一补回（视觉整改 V2） */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary {
+    cursor: pointer;
+  }
+
+  /* 原生 <select> 统一样式。放在 base 层而不是裸规则：base 低于 utilities，
+     页面可以用 w-56 / flex-1 这类工具类覆盖宽度，不必再写 !important。
+     文本输入已由 components/ui/input.tsx、textarea.tsx 接管，这里只保留 select。 */
+  select {
+    @apply bg-muted border border-border rounded-md px-3 py-2 text-sm text-foreground outline-none w-full
+           transition-colors hover:border-muted-foreground
+           focus:border-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset
+           disabled:cursor-not-allowed disabled:opacity-50;
+  }
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { @apply bg-border rounded; }
+::-webkit-scrollbar-thumb:hover { @apply bg-muted-foreground/40; }
+::-webkit-scrollbar-track { background: transparent; }
+
+
+/* 按钮已统一由 components/ui/button.tsx 提供，自建 .btn* 类已下线（零引用后删除） */
+/* 卡片已统一由 components/ui/card.tsx 提供，自建 .card 类已下线（零引用后删除） */

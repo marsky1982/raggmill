@@ -1,0 +1,191 @@
+# PR / 主干自动检查：后端 pytest + 前端 ESLint / Vitest / 类型检查与构建 + Playwright e2e。
+# 只做检查、不部署、不需要任何密钥；不连真实 RAGFlow / LLM（测试全部打桩，演示模式 0 token）。
+# e2e 的 webServer 自己起前后端（后端 8137 + 演示模式 + 临时数据目录，前端 5184），不读仓库 data/。
+# 依赖以 backend/requirements.lock 为准（ragas 是固定 commit 的补丁版 fork，见 backend/requirements.txt）。
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: 后端 pytest
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      PYTHONUTF8: "1"
+      RAGAS_DO_NOT_TRACK: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.lock
+            backend/requirements-dev.txt
+      - name: 安装依赖（锁文件 + pytest）
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.lock
+          python -m pip install "$(grep -E '^pytest==' requirements-dev.txt)"
+      - name: pytest
+        run: python -m pytest -q
+
+  frontend:
+    name: 前端 lint / 测试 / 构建
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: ESLint
+        run: npm run lint
+      - name: Vitest（纯逻辑 + 组件）
+        run: npm test
+      - name: 类型检查 + 构建（tsc -b && vite build）
+        run: npm run build
+
+  e2e:
+    name: 前端 e2e（Playwright·演示模式）
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+      RAGAS_DO_NOT_TRACK: "true"
+      # runner 上没有 Edge，用 Playwright 自带 chromium（本地不传此变量，仍复用本机 Edge）
+      RAGAS_E2E_BROWSER: chromium
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/requirements.lock
+      - name: 安装后端依赖（e2e 的 webServer 会自己起后端）
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.lock
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: 安装前端依赖
+        working-directory: frontend
+        run: npm ci
+      - name: 安装 chromium 与系统依赖
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Playwright e2e（后端演示模式，临时数据目录，0 token）
+        working-directory: frontend
+        run: npm run e2e
+      - name: 上传运行记录（trace / 截图 / HTML 报告）
+        # 成功也上传：某个用例第一次失败、重试后通过时整体算通过，失败那次的 trace 不能丢
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  api-contract:
+    name: OpenAPI 与前端类型一致
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/requirements.lock
+      - name: 安装后端依赖（仅为离线导出 OpenAPI）
+        working-directory: backend
+        env:
+          PYTHONUTF8: "1"
+          RAGAS_DO_NOT_TRACK: "true"
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.lock
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: 安装前端依赖
+        working-directory: frontend
+        run: npm ci
+      - name: 重新生成前端 API 类型
+        working-directory: frontend
+        run: npm run gen:api
+      - name: 校验生成结果已提交且与后端一致
+        run: |
+          if ! git diff --exit-code -- frontend/src/api-types.ts; then
+            echo "::error::frontend/src/api-types.ts 与后端 OpenAPI 不一致，请在本地执行 cd frontend && npm run gen:api 后提交"
+            exit 1
+          fi
+
+  docker:
+    name: Docker 镜像构建
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: 构建后端镜像
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          load: true
+          tags: ragas-testset-studio-backend:ci
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+      - name: 构建前端镜像
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          load: true
+          tags: ragas-testset-studio-frontend:ci
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+      - name: 后端镜像自检（断网：tiktoken 编码已预取、应用可导入）
+        run: |
+          docker run --rm --network none ragas-testset-studio-backend:ci python -c "
+          import tiktoken
+          for name in ('cl100k_base', 'o200k_base'):
+              tiktoken.get_encoding(name)
+          import app.main
+          print('backend image ok')
+          "
+      - name: 前端镜像自检（渲染 nginx 模板并校验配置）
+        run: |
+          docker run --rm --add-host backend:127.0.0.1 \
+            -e STUDIO_ALLOWED_HOSTS=raggmill.example.com -e STUDIO_WRITE_TOKEN=ci-token \
+            ragas-testset-studio-frontend:ci nginx -t

@@ -1,0 +1,8 @@
+# 构建上下文只要前端源码；node_modules 必须在镜像内 npm ci 重装（跨平台不可复用）
+node_modules/
+dist/
+.env.local
+.env.*.local
+test-results/
+playwright-report/
+*.log

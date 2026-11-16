@@ -1,0 +1,5 @@
+# 开发/测试依赖（不进运行时锁文件 requirements.lock）
+# 安装：backend\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+# 注：全局 pip 源 tuna 镜像对 pip 返回 403 时，临时加 -i https://pypi.org/simple
+-r requirements.txt
+pytest==9.1.1

@@ -1,0 +1,10 @@
+# 构建上下文只需源码 + requirements.lock
+.venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+tests/
+pytest.ini
+requirements-dev.txt
+*.log

@@ -1,0 +1,74 @@
+# 工作台的 Docker 形态（新增的一条路，不影响本机原生开发）
+#
+#   docker compose up -d --build      起服务（默认 http://127.0.0.1:8080，只绑本机）
+#   docker compose logs -f backend    看后端日志
+#   docker compose down               停服务（data/ 保留）
+#
+# 与 RAGFlow 同机、要在容器里访问 RAGFlow 时，叠加 docker-compose.ragflow.yml（加入 RAGFlow 的 docker 网络）：
+#   RAGFLOW_NETWORK=<RAGFlow 编排项目名>_ragflow docker compose -f docker-compose.yml -f docker-compose.ragflow.yml up -d
+#
+# ⚠ 不要让本机原生方式（start.ps1 / start.sh → run.py）和 Docker 同时指向同一份 data/：
+#   data/.backend.lock 按 PID 判断对方是否存活，容器与宿主机互相看不到对方的 PID，
+#   两边都会认为对方已退出并接管，结果是两个后端并发写同一份索引。
+
+name: ragas-studio
+
+services:
+  backend:
+    build:
+      context: ./backend
+    image: raggmill-backend:local
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      # 数据目录：与 config.py 的 DATA_DIR 对齐；容器内固定 /app/data，由下面的卷承载
+      RAGAS_STUDIO_DATA_DIR: /app/data
+      # TrustedHost + 同源写保护白名单（与 frontend 的 nginx server_name 共用同一个 STUDIO_ALLOWED_HOSTS）。
+      # 回环名 127.0.0.1 / localhost 后端始终放行；上云只需追加实际域名，例如 raggmill.example.com
+      RAGAS_STUDIO_ALLOWED_HOSTS: ${STUDIO_ALLOWED_HOSTS:-127.0.0.1,localhost}
+      # 留空 = 不校验写令牌。设置后：浏览器经 nginx 访问时由 nginx 自动带上，直连 8100 的脚本要自己带
+      # X-RAGAS-Write-Token。它只防「绕过 nginx 直连后端」，不是用户鉴权
+      RAGAS_STUDIO_WRITE_TOKEN: ${STUDIO_WRITE_TOKEN:-}
+      # 1 = 演示模式（不连外部 LLM/Embedding），冒烟验证用
+      RAGAS_DEMO: ${RAGAS_DEMO:-}
+    volumes:
+      # data/ 用 bind mount 而不是 named volume：里面全是本地 JSON + uploads，
+      # 用户需要能直接用文件管理器看、拷、备份；storage 包是同步文件读写 + 进程内索引，
+      # 也不能换成网络盘。named volume 还会让「宿主机备份 data/」这件事变复杂。
+      - ${STUDIO_DATA_DIR:-./data}:/app/data
+      # config.BACKUP_DIR 落在 DATA_DIR 的父目录（.backups），单独给一个卷持久化
+      - studio-backups:/app/.backups
+    ports:
+      # 只绑本机回环：外部入口一律经 frontend 的 nginx 反向代理
+      - "127.0.0.1:${STUDIO_BACKEND_PORT:-8100}:8100"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8100/api/health', timeout=4).status == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+    image: raggmill-frontend:local
+    restart: unless-stopped
+    depends_on:
+      backend:
+        # 等 /api/health 通过再起 nginx：nginx 启动时就要解析 upstream backend
+        condition: service_healthy
+    environment:
+      TZ: Asia/Shanghai
+      # 以下由 nginx 启动时渲染进配置（见 frontend/nginx/templates/default.conf.template）
+      STUDIO_ALLOWED_HOSTS: ${STUDIO_ALLOWED_HOSTS:-127.0.0.1,localhost}
+      STUDIO_WRITE_TOKEN: ${STUDIO_WRITE_TOKEN:-}
+      RAGFLOW_DOMAIN: ${RAGFLOW_DOMAIN:-ragflow.example.com}
+      # 默认是 RAGFlow 编排里的服务名，需叠加 docker-compose.ragflow.yml 才能解析
+      RAGFLOW_WEB_UPSTREAM: ${RAGFLOW_WEB_UPSTREAM:-http://ragflow-cpu:80}
+    ports:
+      # 默认只绑本机回环：局域网里的其他机器访问不到。
+      # 上云把 STUDIO_WEB_BIND 设为 0.0.0.0、STUDIO_WEB_PORT 设为 80，并用防火墙只放行反向代理
+      - "${STUDIO_WEB_BIND:-127.0.0.1}:${STUDIO_WEB_PORT:-8080}:80"
+
+volumes:
+  studio-backups:

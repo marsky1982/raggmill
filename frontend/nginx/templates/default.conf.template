@@ -1,0 +1,119 @@
+# 工作台前端容器（nginx）——同源托管 dist 并把 /api 反代到 backend 容器
+#
+# 本文件是模板：容器启动时由 nginx 官方镜像的 envsubst 步骤渲染成 /etc/nginx/conf.d/default.conf，
+# 只替换 STUDIO_ / RAGFLOW_ 开头的变量（Dockerfile 里设了 NGINX_ENVSUBST_FILTER），$host 等 nginx 变量原样保留。
+#
+# 三个 server：
+#   1. 兜底（default_server）：Host 不在白名单的一律断开（444），防止局域网 / 任意域名直接打到 /api；
+#      只留 /healthz 给负载均衡健康检查用（健康检查的 Host 通常是实例 IP，进不了白名单）。
+#   2. 工作台：server_name 来自 STUDIO_ALLOWED_HOSTS（与后端白名单同一个变量），由
+#      /docker-entrypoint.d/15-studio-server-names.sh 写成 /etc/nginx/studio_server_names.conf。
+#   3. RAGFlow 子域：转给 RAGFlow 自带的 Web（它的镜像里另有一个 nginx，与本文件无关）。
+#
+# SSE 为什么单独一段：nginx 默认缓冲上游响应，长任务的进度事件会「攒着不动」，前端进度条看着像卡死。
+
+# ---------- 1. 兜底：未知 Host ----------
+server {
+    listen 80 default_server;
+    server_name _;
+
+    # 负载均衡 / 运维探活：固定按回环 Host 转给后端 /api/health（后端白名单始终含回环名）
+    location = /healthz {
+        proxy_pass http://backend:8100/api/health;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host 127.0.0.1;
+        proxy_read_timeout 10s;
+    }
+
+    location / {
+        return 444;
+    }
+}
+
+# ---------- 2. 工作台 ----------
+server {
+    listen 80;
+    include /etc/nginx/studio_server_names.conf;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # 上传原文/文件夹是多部分表单，留足余量
+    client_max_body_size 100m;
+
+    # 同样的探活入口，方便用域名直接检查
+    location = /healthz {
+        proxy_pass http://backend:8100/api/health;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host 127.0.0.1;
+        proxy_read_timeout 10s;
+    }
+
+    # Vite 产物文件名带 hash，可长期缓存
+    location /assets/ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # 长任务进度：/api/tasks/{id}/stream 及其兼容别名
+    location ~ ^/api/(?:tasks|kg/tasks|testset/tasks)/[^/]+/stream$ {
+        proxy_pass http://backend:8100;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # 写令牌在这里注入，不进浏览器 bundle（值为空时 nginx 不发这个头）
+        proxy_set_header X-RAGAS-Write-Token "${STUDIO_WRITE_TOKEN}";
+        # 进度事件必须逐条透传，不能缓冲
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        chunked_transfer_encoding on;
+    }
+
+    # 其余 API：建图/出题/RAGFlow 同步都是分钟级请求，超时给足
+    location /api/ {
+        proxy_pass http://backend:8100;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-RAGAS-Write-Token "${STUDIO_WRITE_TOKEN}";
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+    }
+
+    # 单页应用：所有未命中的路径回到 index.html
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+# ---------- 3. RAGFlow 子域 ----------
+# 多子域部署时反向代理通常只有一个后端目标组（本容器 80），两个子域靠 server_name 分发。
+# 上游默认是 RAGFlow 编排里的服务名 ragflow-cpu（需用 docker-compose.ragflow.yml 加入 RAGFlow 的网络）；
+# 用变量 + Docker 内置 DNS 解析，RAGFlow 没起或没接入网络时 nginx 照常启动，请求时才 502。
+server {
+    listen 80;
+    server_name ${RAGFLOW_DOMAIN};
+
+    resolver 127.0.0.11 valid=10s ipv6=off;
+
+    location / {
+        set $ragflow_upstream ${RAGFLOW_WEB_UPSTREAM};
+        proxy_pass $ragflow_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 600s;
+        client_max_body_size 200m;
+    }
+}

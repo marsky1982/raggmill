@@ -1,0 +1,29 @@
+# 叠加文件：让工作台容器加入 RAGFlow 的 docker 网络（与 RAGFlow 同机部署时用）
+#
+#   RAGFLOW_NETWORK=<RAGFlow 编排项目名>_ragflow \
+#     docker compose -f docker-compose.yml -f docker-compose.ragflow.yml up -d
+#
+# 为什么需要：容器里的 127.0.0.1 指的是容器自己，连不到宿主机上的 RAGFlow；
+# 而 RAGFlow 上云时端口只绑宿主机回环，Linux 上经 host-gateway 也连不到。
+# 加入 RAGFlow 的网络后，直接用它的服务名访问：
+#   - 工作台「RAGFlow 连接」的服务地址填 http://ragflow-cpu:9380
+#   - ragflow.<域名> 子域由 frontend 的 nginx 转给 http://ragflow-cpu:80
+#
+# 网络名 = RAGFlow 编排的项目名 + "_ragflow"（RAGFlow 的 docker-compose.yml 里网络叫 ragflow）。
+# 查看：docker network ls | grep ragflow
+# 示例：RAGFlow 部署目录下的默认网络名形如 <compose 项目名>_ragflow。
+
+services:
+  backend:
+    networks:
+      - default
+      - ragflow
+  frontend:
+    networks:
+      - default
+      - ragflow
+
+networks:
+  ragflow:
+    external: true
+    name: ${RAGFLOW_NETWORK:?请设置 RAGFLOW_NETWORK 为 RAGFlow 的 docker 网络名，例如 ragflow_ragflow}
