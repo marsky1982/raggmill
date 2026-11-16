@@ -164,7 +164,7 @@ jobs:
         with:
           context: backend
           load: true
-          tags: ragas-testset-studio-backend:ci
+          tags: raggmill-backend:ci
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
       - name: 构建前端镜像
@@ -172,12 +172,12 @@ jobs:
         with:
           context: frontend
           load: true
-          tags: ragas-testset-studio-frontend:ci
+          tags: raggmill-frontend:ci
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
       - name: 后端镜像自检（断网：tiktoken 编码已预取、应用可导入）
         run: |
-          docker run --rm --network none ragas-testset-studio-backend:ci python -c "
+          docker run --rm --network none raggmill-backend:ci python -c "
           import tiktoken
           for name in ('cl100k_base', 'o200k_base'):
               tiktoken.get_encoding(name)
@@ -187,5 +187,5 @@ jobs:
       - name: 前端镜像自检（渲染 nginx 模板并校验配置）
         run: |
           docker run --rm --add-host backend:127.0.0.1 \
-            -e STUDIO_ALLOWED_HOSTS=raggmill.example.com -e STUDIO_WRITE_TOKEN=ci-token \
-            ragas-testset-studio-frontend:ci nginx -t
+            -e STUDIO_ALLOWED_HOSTS=ragas.example.com -e STUDIO_WRITE_TOKEN=ci-token \
+            raggmill-frontend:ci nginx -t

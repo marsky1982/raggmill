@@ -11,7 +11,7 @@ RAGgmill is a local-first RAG quality engineering platform that turns unstructur
                                       ↘ [Step 3] 质量评估（可选）
 ```
 
-分工上，**ragas 是引擎，raggmill 是驾驶舱**：本工具只做 [ragas](https://github.com/vibrantlabsai/ragas) SDK 的消费方，不修改 ragas 源码，也不重新实现出题算法。
+分工上，**ragas 是引擎，raggmill 是上层工作台**：本工具只做 [ragas](https://github.com/vibrantlabsai/ragas) SDK 的消费方，不修改 ragas 源码，也不重新实现出题算法。
 
 - 无数据库：全部产物落在本地 `data/`（JSON + 上传副本），可直接用文件管理器查看、备份。
 - 单机单用户：后端有单实例锁，避免多进程并发写同一份索引。

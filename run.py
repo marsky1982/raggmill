@@ -110,7 +110,7 @@ def healthy(state):
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect())
         with opener.open(f"http://127.0.0.1:{state['backend_port']}/api/health",timeout=1) as r:
             data = json.load(r)
-        return (data.get('app_id') == 'ragas-testset-studio' and data.get('workspace_id') == workspace_id()
+        return (data.get('app_id') == 'raggmill' and data.get('workspace_id') == workspace_id()
                 and data.get('instance_id') == state['instance_id'] and data.get('mode') == state['mode'])
     except (OSError,ValueError,KeyError): return False
 

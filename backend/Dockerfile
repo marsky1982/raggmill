@@ -42,7 +42,7 @@ WORKDIR /app/backend
 EXPOSE 8100
 
 # 用自带的 urllib 做探活，镜像里不额外装 curl。
-# Host 头是 127.0.0.1:8100：后端白名单始终含回环名（main.py 的 _allowed_hosts），上云只填域名也不影响探活。
+# Host 头是 127.0.0.1:8100：后端白名单始终含回环名（main.py 的 _allowed_hosts），对外部署只填域名也不影响探活。
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
     CMD ["python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8100/api/health', timeout=4).status == 200 else 1)"]
 

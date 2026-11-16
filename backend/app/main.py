@@ -1,4 +1,4 @@
-"""ragas-testset-studio 后端入口。"""
+"""RAGgmill 后端入口。"""
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
@@ -44,14 +44,14 @@ async def lifespan(_app: FastAPI):
         release_lock()
 
 
-app = FastAPI(title="ragas-testset-studio", version="0.1.0-demo", lifespan=lifespan)
+app = FastAPI(title="RAGgmill", version="0.1.0-demo", lifespan=lifespan)
 # 非 2xx 统一错误体 {detail, error_code, extra?}（含 HTTPException / 422 / ApiError）
 install_error_handlers(app)
 INSTANCE_ID = os.environ.get("RAGAS_STUDIO_INSTANCE_ID") or uuid.uuid4().hex
 WORKSPACE_ID = hashlib.sha256(str(Path(__file__).resolve().parents[2]).casefold().encode()).hexdigest()[:16]
 _DEFAULT_HOSTS = ("127.0.0.1", "localhost", "testserver")
 # 回环名始终放行：容器 / 启动器的健康检查都按 127.0.0.1 访问。配置的域名只做「追加」——
-# 旧实现设了 RAGAS_STUDIO_ALLOWED_HOSTS 就整体替换，上云只填域名时健康检查被 400，
+# 旧实现设了 RAGAS_STUDIO_ALLOWED_HOSTS 就整体替换，对外部署只填域名时健康检查被 400，
 # compose 判后端 unhealthy、前端起不来。回环名不削弱防护：DNS rebinding 的 Host 是攻击者域名。
 _LOOPBACK_HOSTS = ("127.0.0.1", "localhost")
 
@@ -219,7 +219,7 @@ async def shutdown():
 @app.get("/api/health")
 def health():
     commit, commit_note = _code_commit()
-    return {"status": "ok", "mode": MODE, "app_id": "ragas-testset-studio",
+    return {"status": "ok", "mode": MODE, "app_id": "raggmill",
             "workspace_id": WORKSPACE_ID, "instance_id": INSTANCE_ID, "process_id": os.getpid(),
             "started_at": STARTED_AT, "commit": commit, "commit_note": commit_note,
             "storage": storage.storage_health()}

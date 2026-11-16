@@ -4,7 +4,7 @@
 #     docker compose -f docker-compose.yml -f docker-compose.ragflow.yml up -d
 #
 # 为什么需要：容器里的 127.0.0.1 指的是容器自己，连不到宿主机上的 RAGFlow；
-# 而 RAGFlow 上云时端口只绑宿主机回环，Linux 上经 host-gateway 也连不到。
+# 而 RAGFlow 部署在别的机器时，端口只绑宿主机回环，Linux 上经 host-gateway 也连不到。
 # 加入 RAGFlow 的网络后，直接用它的服务名访问：
 #   - 工作台「RAGFlow 连接」的服务地址填 http://ragflow-cpu:9380
 #   - ragflow.<域名> 子域由 frontend 的 nginx 转给 http://ragflow-cpu:80

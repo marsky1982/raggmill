@@ -24,7 +24,7 @@ services:
       # 数据目录：与 config.py 的 DATA_DIR 对齐；容器内固定 /app/data，由下面的卷承载
       RAGAS_STUDIO_DATA_DIR: /app/data
       # TrustedHost + 同源写保护白名单（与 frontend 的 nginx server_name 共用同一个 STUDIO_ALLOWED_HOSTS）。
-      # 回环名 127.0.0.1 / localhost 后端始终放行；上云只需追加实际域名，例如 raggmill.example.com
+      # 回环名 127.0.0.1 / localhost 后端始终放行；对外部署只需追加实际域名，例如 raggmill.example.com
       RAGAS_STUDIO_ALLOWED_HOSTS: ${STUDIO_ALLOWED_HOSTS:-127.0.0.1,localhost}
       # 留空 = 不校验写令牌。设置后：浏览器经 nginx 访问时由 nginx 自动带上，直连 8100 的脚本要自己带
       # X-RAGAS-Write-Token。它只防「绕过 nginx 直连后端」，不是用户鉴权
@@ -67,7 +67,7 @@ services:
       RAGFLOW_WEB_UPSTREAM: ${RAGFLOW_WEB_UPSTREAM:-http://ragflow-cpu:80}
     ports:
       # 默认只绑本机回环：局域网里的其他机器访问不到。
-      # 上云把 STUDIO_WEB_BIND 设为 0.0.0.0、STUDIO_WEB_PORT 设为 80，并用防火墙只放行反向代理
+      # 对外部署时把 STUDIO_WEB_BIND 设为 0.0.0.0、STUDIO_WEB_PORT 设为 80，并用防火墙只放行反向代理
       - "${STUDIO_WEB_BIND:-127.0.0.1}:${STUDIO_WEB_PORT:-8080}:80"
 
 volumes:

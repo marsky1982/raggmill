@@ -28,8 +28,8 @@ def llm_streaming_enabled(preset: dict) -> bool:
     return _STREAMING_DEFAULT
 
 
-# DashScope 兼容层默认开启「思考模式」（实测：一次 100 token 的回答里有 86 token 是思考内容、
-# 耗时 1.9 秒；关掉后 15/13、0.9 秒），出题时输出会被放大到输入的近 3 倍。这里默认关掉。
+# DashScope 兼容层默认开启「思考模式」（某推理模型 实测：默认 41/100 token 里 86 是思考 token、
+# 1.9 秒；关掉后 15/13、0.9 秒），出题时输出被放大到输入的近 3 倍。这里默认关掉。
 # 该字段只在 DashScope 上认：兼容网关与其它服务商收到 `enable_thinking` 会直接 400，
 # 所以非 DashScope 端点一律**不发送**这个字段。
 _DASHSCOPE_HOSTS = ("dashscope.aliyuncs.com", "dashscope-intl.aliyuncs.com", "dashscope-us.aliyuncs.com")

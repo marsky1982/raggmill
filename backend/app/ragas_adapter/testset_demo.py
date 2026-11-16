@@ -35,7 +35,7 @@ _QUERIES = {
 
 _ANSWERS = {
     "SingleHopSpecificQuery": "根据文档第 {n} 节：支持 .md / .html / .docx 三种格式，PDF 需预先解析后喂入。知识图谱生成后以 ragas 原生 JSON 落盘，Step 2 可直接选择复用，无需重算。",
-    "MultiHopAbstractQuery": "综合多节内容：产品定位为「ragas 是引擎、工具是驾驶舱」，以两步工作流解耦知识图谱构建与测试集生成，强调可视化、可复用与本地优先。",
+    "MultiHopAbstractQuery": "综合多节内容：产品定位为本地优先的 RAG 质量工程平台，以两步工作流把知识图谱构建与测试集生成解耦，强调可视化、可复用与可审计。",
     "MultiHopSpecificQuery": "跨节推导：结合计费（按 token 用量统计）与性能（长任务异步 + SSE 流式）章节，月度成本主要由 LLM 调用次数与并发配置决定，建议通过 KG 复用降低重复计算。",
 }
 

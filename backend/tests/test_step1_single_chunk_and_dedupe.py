@@ -204,7 +204,7 @@ class _FakeEmbeddings:
 
 
 def test_single_chunk_enhance_runs_through_real_transforms():
-    """锁定的真实结论（原先只存在于工单评论里，这里固化成可回归的集成用例）：
+    """锁定的真实结论（这里固化成可回归的集成用例）：
 
     1. ragas 的 HeadlineSplitter 在只剩 1 段时 `return [node], []`，不会产出 chunk 节点，
        所以真实 build_kg 流水线本身走不出「恰好 1 个分块」；

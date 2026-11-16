@@ -56,7 +56,7 @@ def test_write_token_is_required_when_configured(monkeypatch):
 
 
 def test_configured_domains_extend_instead_of_replacing_loopback():
-    """上云只填域名时，回环名仍要放行：容器健康检查按 127.0.0.1 访问，被 400 会让整个 compose 起不来。"""
+    """对外部署只填域名时，回环名仍要放行：容器健康检查按 127.0.0.1 访问，被 400 会让整个 compose 起不来。"""
     from app.main import _allowed_hosts
 
     hosts = _allowed_hosts("raggmill.example.com")

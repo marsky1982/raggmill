@@ -17,7 +17,7 @@
                                         ↘ [Step 3] 质量评估（可选）
 ```
 
-**ragas 是引擎、本工具是驾驶舱**：只做 ragas SDK 的消费方，不改 ragas 源码；所有 ragas 调用集中在 `backend/app/ragas_adapter/`，路由层不直接 import ragas。
+**ragas 是引擎、本工具是上层工作台**：只做 ragas SDK 的消费方，不改 ragas 源码；所有 ragas 调用集中在 `backend/app/ragas_adapter/`，路由层不直接 import ragas。
 
 技术形态：后端 FastAPI（Python 3.13），前端 React 19 + TypeScript + Tailwind v4 + shadcn/ui（Vite）；前后端由 `run.py` / `start.ps1` 统一拉起，前端用 Vite 代理 `/api` 到实际后端端口。
 

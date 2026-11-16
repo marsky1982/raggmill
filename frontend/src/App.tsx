@@ -34,10 +34,7 @@ export default function App() {
         <div className="px-5 py-5 border-b border-border">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center text-[11px] font-bold text-primary-foreground">R</div>
-            <div className="font-semibold text-sm">ragas-testset-studio</div>
-          </div>
-          <div className="mt-2 text-xs text-muted-foreground">
-            ragas 是引擎，本工具是驾驶舱
+            <div className="font-semibold text-sm">RAGgmill</div>
           </div>
         </div>
         <nav className="flex-1 p-3 space-y-1">

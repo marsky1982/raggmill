@@ -56,7 +56,7 @@ def gateway():
             if self.path.endswith("/embeddings"):
                 texts = body["input"] if isinstance(body["input"], list) else [body["input"]]
                 if len(texts) > 1:
-                    return self._error("This ModelArk text protocol supports one text per request; "
+                    return self._error("This gateway text protocol supports one text per request; "
                                        "use a string or a singleton array.")
                 return self._reply(200, {"object": "list", "model": body["model"],
                                          "data": [{"object": "embedding", "index": 0,

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- 站点图标：知识图谱三角标记（三节点 + 连线），主色 #5E6AD2，透明背景。
      与 favicon.ico 同一几何图形；#5E6AD2 对浅底 #FAFAFA 与深底 #0A0A0B 的对比度均 > 4:1。 -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="ragas-testset-studio">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="RAGgmill">
   <g stroke="#5E6AD2" stroke-width="1.9" fill="none">
     <line x1="8.5" y1="23.5" x2="23.5" y2="23.5" />
     <line x1="8.5" y1="23.5" x2="16" y2="8" />

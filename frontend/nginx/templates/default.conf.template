@@ -5,7 +5,7 @@
 #
 # 三个 server：
 #   1. 兜底（default_server）：Host 不在白名单的一律断开（444），防止局域网 / 任意域名直接打到 /api；
-#      只留 /healthz 给负载均衡健康检查用（健康检查的 Host 通常是实例 IP，进不了白名单）。
+#      只留 /healthz 给反向代理健康检查用（这类探活的 Host 是容器 IP，进不了白名单）。
 #   2. 工作台：server_name 来自 STUDIO_ALLOWED_HOSTS（与后端白名单同一个变量），由
 #      /docker-entrypoint.d/15-studio-server-names.sh 写成 /etc/nginx/studio_server_names.conf。
 #   3. RAGFlow 子域：转给 RAGFlow 自带的 Web（它的镜像里另有一个 nginx，与本文件无关）。
@@ -17,7 +17,7 @@ server {
     listen 80 default_server;
     server_name _;
 
-    # 负载均衡 / 运维探活：固定按回环 Host 转给后端 /api/health（后端白名单始终含回环名）
+    # 反向代理 / 运维探活：固定按回环 Host 转给后端 /api/health（后端白名单始终含回环名）
     location = /healthz {
         proxy_pass http://backend:8100/api/health;
         proxy_http_version 1.1;
@@ -97,7 +97,7 @@ server {
 }
 
 # ---------- 3. RAGFlow 子域 ----------
-# 多子域部署时反向代理通常只有一个后端目标组（本容器 80），两个子域靠 server_name 分发。
+# 反向代理只有一个上游（本容器 80），两个子域靠 server_name 分发。
 # 上游默认是 RAGFlow 编排里的服务名 ragflow-cpu（需用 docker-compose.ragflow.yml 加入 RAGFlow 的网络）；
 # 用变量 + Docker 内置 DNS 解析，RAGFlow 没起或没接入网络时 nginx 照常启动，请求时才 502。
 server {
